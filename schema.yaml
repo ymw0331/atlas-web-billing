@@ -1,0 +1,530 @@
+openapi: 3.0.3
+info:
+  title: Billing Schema
+  description: API for managing billing
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+paths:
+  /billing:
+    get:
+      summary: List all billing
+      description: Retrieve a list of all billing
+      operationId: listBilling
+      tags:
+        - Billing
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of billing to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of billing to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BillingSchema'
+                  total:
+                    type: integer
+                    description: Total number of billing
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /billing/{billingId}:
+    get:
+      summary: Get a billing by ID
+      description: Retrieve details of a specific billing
+      operationId: getBilling
+      tags:
+        - Billing
+      parameters:
+        - name: billingId
+          in: path
+          description: ID of the billing to retrieve
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSchema'
+        '404':
+          description: Billing not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    BillingSchema:
+      type: object
+      required:
+        - id
+        - name
+        - billingPeriod
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the billing
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          description: Name of the billing
+          example: "Q4 Sales Billing"
+        billingPeriod:
+          type: string
+          enum:
+            - Monthly
+            - Quarterly
+          description: Period for which the billing applies
+          example: "Quarterly"
+        description:
+          type: string
+          description: Description of the billing
+          example: "Q4 2024 Sales Billing"
+        billingType:
+          type: string
+          enum:
+            - ClearingFeeBilling
+            - Incentive
+            - CashSettlementFee
+          description: Type of billing detail
+          example: "ClearingFeeBilling"
+        payoutCap:
+          type: number
+          format: decimal
+          description: Cap amount for the billing
+          example: 10000.50
+        payoutType:
+          type: string
+          enum:
+            - SUM
+            - MAX
+            - TIERED_SUM
+          description: Type of payout calculation
+          example: "SUM"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the billing was created
+          example: "2024-12-08T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the billing was last updated
+          example: "2024-12-08T15:45:00Z"
+        expiresAt:
+          type: string
+          format: date-time
+          description: Timestamp when the billing expires
+          example: "2025-03-08T23:59:59Z"
+        billingProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductFilter'
+          description: List of product filters for billing
+        supportProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductFilter'
+          description: List of product filters for support
+        incentives:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incentive'
+          description: List of incentives
+
+    ProductFilter:
+      type: object
+      required:
+        - filterName
+        - assetClass
+        - productCodes
+        - tradeCategory
+        - contractCategory
+      properties:
+        filterName:
+          type: string
+          description: Name of the product filter
+          example: "Equity Derivatives Filter"
+        assetClass:
+          type: string
+          description: Asset class for the filter
+          example: "Equities"
+        productCodes:
+          type: array
+          items:
+            type: string
+          description: List of product codes
+          example: ["PROD-001", "PROD-002", "PROD-003"]
+        tradeCategory:
+          $ref: '#/components/schemas/TradeCategory'
+        contractFilter:
+          $ref: '#/components/schemas/ContractFilter'
+        rollsFilter:
+          $ref: '#/components/schemas/RollsFilter'
+
+    ContractFilter:
+      type: object
+      properties:
+        contractCategory:
+          type: string
+          description: Category of contract
+          example: "Options"
+        contractMonth:
+          type: string
+          enum:
+            - SpotMonth
+            - SecondNearestContractMonth
+          description: Contract month specification
+          example: "SpotMonth"
+        outrightTrade:
+          type: boolean
+          description: Flag indicating if Outright applies
+          example: true
+        calendarSpreadTrade:
+          type: boolean
+          description: Flag indicating if calendar spread trade applies
+          example: true
+
+    RollsFilter:
+      type: object
+      properties:
+        rollType:
+          type: string
+          enum:
+            - LTD
+          description: Type of roll
+          example: "LTD"
+        rollOutStart:
+          type: integer
+          description: Roll out start value
+          default: 0
+          example: 0
+        rollInStart:
+          type: integer
+          description: Roll in start value
+          default: 0
+          example: 0
+
+    TradeCategory:
+      type: object
+      properties:
+        electronic:
+          type: boolean
+          description: Electronic trade flag
+          default: false
+          example: false
+        nlt:
+          type: boolean
+          description: NLT flag
+          default: false
+          example: false
+        maker:
+          type: boolean
+          description: Maker flag
+          default: false
+          example: false
+        taker:
+          type: boolean
+          description: Taker flag
+          default: false
+          example: false
+
+    Incentive:
+      type: object
+      required:
+        - payoutUnit
+        - payoutRate
+        - obligations
+      properties:
+        applicableProductGroupNames:
+          type: array
+          items:
+            type: string
+          description: List of product group names. Empty or null means applicable to all
+          example: ["Equity Derivatives", "Fixed Income"]
+        payoutUnit:
+          type: string
+          enum:
+            - USD per Lot
+            - SGD per Lot
+            - Percent
+            - BasisPoint
+          description: Unit for payout calculation
+          example: "USD per Lot"
+        payoutRate:
+          type: number
+          format: decimal
+          description: Rate of payout
+          example: 2.50
+        obligations:
+          $ref: '#/components/schemas/ObligationGroup'
+
+    ObligationGroup:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - AND
+            - OR
+          description: Logical operator for combining groups or obligations
+          example: "AND"
+        obligationOutcome:
+          type: boolean
+          description: Flag indicating if obligation is passed
+          default: false
+          example: false
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObligationGroup'
+          description: List of nested obligation groups
+        obligations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Obligation'
+          description: List of obligations
+        marketMakerObligations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarketMakerObligation'
+          description: List of market maker obligations
+
+    Obligation:
+      type: object
+      required:
+        - obligationType
+        - valueType
+        - valueFrom
+        - valueTo
+        - valueUnit
+      properties:
+        applicableProductGroupNames:
+          type: array
+          items:
+            type: string
+          description: List of product group names. Empty or null means applicable to all
+          example: ["Equity Derivatives", "Fixed Income"]
+        obligationOutcome:
+          type: boolean
+          description: Flag indicating if obligation is passed
+          default: false
+          example: false
+        obligationResult:
+          type: number
+          format: decimal
+          description: Result value of the obligation
+          example: 1500.75
+        obligationType:
+          type: string
+          enum:
+            - Volume
+            - ADOI
+            - MQTV
+            - Percentage
+          description: "Type of obligation. ADOI: Average Daily Open Interest, MQTV: Monthly Qualifying Traded Value"
+          example: "Volume"
+        valueType:
+          type: string
+          enum:
+            - Range
+            - GreaterThan
+          description: Type of value specification
+          example: "Range"
+        valueFrom:
+          type: number
+          description: Starting value for the obligation
+          example: 1000
+        valueTo:
+          type: number
+          description: Ending value for the obligation
+          example: 5000
+        valueUnit:
+          type: string
+          enum:
+            - Lots
+            - Tones
+            - Metric Tonnes
+          description: Unit of measurement for the value
+          example: "Lots"
+
+    MarketMakerObligation:
+      type: object
+      required:
+        - timeRange
+        - endTimeInNextDay
+        - minQuoteTimePercentage
+        - minSizeInLotsOnEachSide
+      properties:
+        applicableProductGroupNames:
+          type: array
+          items:
+            type: string
+          description: List of product group names. Empty or null means applicable to all
+          example: ["Equity Derivatives", "Fixed Income"]
+        obligationOutcome:
+          type: boolean
+          description: Flag indicating if obligation is passed
+          default: false
+          example: false
+        timeRange:
+          type: object
+          required:
+            - startTime
+            - endTime
+          properties:
+            startTime:
+              type: string
+              format: time
+              description: Start time of the range
+              example: "09:00:00"
+            endTime:
+              type: string
+              format: time
+              description: End time of the range
+              example: "17:00:00"
+          description: Time range for market maker obligations
+        endTimeInNextDay:
+          type: boolean
+          description: Flag indicating if end time is in the next day
+          example: false
+        minQuoteTimePercentage:
+          type: number
+          format: decimal
+          description: Minimum quote time percentage required
+          example: 80.5
+        minSizeInLotsOnEachSide:
+          type: integer
+          format: int64
+          description: Minimum size in lots on each side
+          example: 100
+        obligationTiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarketMakerObligationTier'
+          description: List of market maker obligation tiers
+
+    MarketMakerObligationTier:
+      type: object
+      required:
+        - spread
+        - valueType
+        - valueFrom
+        - valueTo
+        - valueUnit
+      properties:
+        spread:
+          type: number
+          format: decimal
+          description: Spread value for the tier
+          example: 0.05
+        valueType:
+          type: string
+          enum:
+            - Range
+            - GreaterThan
+          description: Type of value specification
+          example: "Range"
+        valueFrom:
+          type: number
+          description: Starting value for the tier
+          example: 100
+        valueTo:
+          type: number
+          description: Ending value for the tier
+          example: 500
+        valueUnit:
+          type: string
+          enum:
+            - IndexPts
+          description: Unit of measurement for the value
+          example: "IndexPts"
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Error message
+          example: "The request was invalid"
+        details:
+          type: array
+          items:
+            type: string
+          description: Additional error details
+          example: ["Field 'amount' must be greater than 0"]
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Billing
+    description: Operations related to billing management
